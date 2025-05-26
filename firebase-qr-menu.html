@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>QR Menü Oluşturucu - Firebase ile Restoran Menüsü</title>
+<style>
+  *, *::before, *::after{box-sizing:border-box;}
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin:0; min-height:100vh;
+    background: linear-gradient(135deg,#2f80ed,#56ccf2);
+    color:#fff; display:flex;justify-content:center;align-items:flex-start;
+    padding:2rem; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  }
+  #app {
+    background:#0a213bcc; border-radius:16px; width:100%; max-width:900px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.3);
+    overflow:hidden; display:flex; flex-direction:column;
+  }
+  header {
+    background:#103675; padding:1.2rem 2rem; font-size:1.6rem; font-weight:900;
+    letter-spacing:0.1em; text-transform:uppercase; user-select:none; color:#fff;
+    box-shadow:0 2px 8px #08306b;
+  }
+  main {
+    padding:2rem; flex-grow:1; overflow-y:auto;
+  }
+  h2 {
+    margin-top:0; font-weight:700; color:#f4f9ff; text-align:center;
+  }
+  form {
+    max-width: 500px; margin: 0 auto 2rem auto;
+  }
+  input[type="text"], input[type="password"], input[type="email"], select, textarea, input[type="file"], input[type="number"] {
+    width: 100%; padding: 12px 14px; margin: 8px 0 16px 0;
+    border-radius: 10px; border: none; font-size: 1rem; font-weight: 500;
+    outline-offset: 2px; outline-color: #56ccf2; transition: outline-color 0.2s ease;
+    background: #1a3164; color: #c8d9ff;
+  }
+  input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus, select:focus, textarea:focus, input[type="file"]:focus, input[type="number"]:focus {
+    outline-color: #2f80ed;
+  }
+  button {
+    cursor: pointer; background: #56ccf2; border: none; border-radius: 14px;
+    padding: 14px 20px; font-weight: 700; font-size: 1.15rem; color: #0a213b;
+    box-shadow: 0 4px 14px #56ccf2cc; transition: background 0.3s ease, box-shadow 0.3s ease;
+    user-select: none; width:100%; margin-bottom: 1rem;
+  }
+  button:hover, button:focus {
+    background: #2f80ed;
+    box-shadow: 0 6px 20px #2f80edcc;
+    outline: none;
+  }
+  button:disabled {
+    background: #95c7f5;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .message {
+    max-width: 500px; margin: 0 auto 1rem auto;
+    padding: 12px 20px; border-radius: 12px; color: #072238;
+    background: #9ae1ff; font-weight: 600; text-align: center;
+  }
+  .screen {
+    display: none;
+  }
+  .screen.active {
+    display: block;
+  }
+  nav.tabs {
+    display: flex; justify-content: center; margin-bottom: 2rem; user-select:none;
+  }
+  nav.tabs button {
+    background: transparent; color: #9ad0ffcc; border: none;
+    padding: 14px 20px; font-weight: 700; font-size: 1.1rem;
+    margin: 0 8px; border-radius: 30px 30px 0 0;
+    box-shadow: inset 0 -3px 0 #56ccf2;
+    transition: color 0.3s ease, box-shadow 0.3s ease;
+  }
+  nav.tabs button.active {
+    color: #f4f9ff;
+    box-shadow: inset 0 -4px 0 0 #2f80ed;
+    cursor: default;
+  }
+  #menu-builder {
+    max-width: 700px; margin: 0 auto;
+  }
+  #menu-builder label {
+    font-weight: 600; margin-bottom: 6px; display: block; color: #a8caff;
+  }
+  #draft-select {
+    background: #173b6b; border-radius: 14px; padding: 1rem;
+    box-shadow: 0 6px 12px #1a2f60cc; text-align:center;
+  }
+  #draft-select button {
+    min-width: 110px;
+    margin: 0.5rem; font-weight: 600;
+    border-radius: 20px;
+    box-shadow: 0 4px 10px #2f80ed99;
+    background: #2f80ed;
+    color: white;
+    transition: background-color 0.3s ease;
+    padding: 12px 10px;
+    user-select:none;
+  }
+  #draft-select button:hover, #draft-select button:focus {
+    background: #56ccf2;
+  }
+  .category-card {
+    background: #163659; margin-bottom: 1rem; border-radius:16px; padding:1rem 1.2rem;
+    box-shadow: inset 0 0 14px #2f80edcc; display:flex; flex-direction: column;
+  }
+  .category-header {
+    display:flex; justify-content: space-between; align-items:center; margin-bottom:10px;
+  }
+  .category-header h3 {
+    margin:0; color:#76a9ff; font-weight:700;
+    outline:none;
+  }
+  .category-header h3[contenteditable]:focus {
+    outline: 2px solid #56ccf2; border-radius:6px;
+    background: #2a438333;
+  }
+  .category-actions button {
+    background: transparent; border:none; color: #4492f6; font-size:1.1rem;
+    cursor:pointer; user-select:none; margin-left:8px; transition:color 0.3s ease;
+  }
+  .category-actions button:hover {
+    color:#a1c9ff;
+  }
+  .product-list {
+    display:flex; flex-wrap: wrap; gap: 12px;
+  }
+  .product-card {
+    background: #22477a; border-radius:12px; padding:10px; width:220px;
+    box-shadow: 0 0 8px rgba(60,130,255,0.5); display:flex; flex-direction: column; user-select:none;
+  }
+  .product-card img {
+    display:block; max-height:120px; object-fit: cover; border-radius:10px;
+    margin-bottom:8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  .product-card input[type="text"],
+  .product-card textarea,
+  .product-card input[type="number"],
+  .product-card input[type="file"] {
+    background: #2a4383; border:none; border-radius:10px; color:#cce3ff;
+    font-size: 0.95rem; font-weight:600; padding:7px 8px; margin-bottom:6px;
+    outline-offset: 2px; outline-color:#2f80ed;
+  }
+  .product-card input::placeholder, .product-card textarea::placeholder {
+    color: #7da6f7;
+  }
+  .product-card textarea {
+    resize: vertical; min-height: 48px;
+  }
+  .product-actions {
+    margin-top: auto; display:flex; justify-content: space-between; align-items:center;
+  }
+  .product-actions button {
+    background: #56ccf2; border-radius: 12px; border:none; padding:6px 14px;
+    color: #0a213b; font-weight:700; font-size:0.9rem;
+    box-shadow: 0 4px 14px #56ccf2cc; transition: background 0.3s ease, box-shadow 0.3s ease;
+    user-select:none; cursor:pointer;
+  }
+  .product-actions button:hover {
+    background: #2f80ed; box-shadow: 0 6px 20px #2f80edcc;
+  }
+  #add-category-btn {
+    display: inline-block; margin: 1rem 0; background: #2f80ed;
+    box-shadow: 0 4px 14px #2f80edcc; color: white; font-weight:700;
+    font-size: 1rem; border-radius: 20px; padding: 10px 18px; cursor:pointer;
+    transition: background-color 0.3s ease; user-select:none;
+  }
+  #add-category-btn:hover {
+    background: #56ccf2;
+  }
+  /* QR modal */
+  #qr-modal-bg {
+    position: fixed; top: 0; left:0; width:100vw; height:100vh;
+    background: #000000bb; display:flex; justify-content:center; align-items:center;
+    z-index: 9999; visibility: hidden; opacity: 0; transition: opacity 0.3s ease;
+  }
+  #qr-modal-bg.active {
+    visibility: visible; opacity:1;
+  }
+  #qr-modal {
+    background: #103675; border-radius: 20px; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    padding: 2rem 3rem; max-width: 400px; width: 95vw;
+    text-align:center; color:white; user-select:none; position:relative;
+  }
+  #qr-modal h3 {
+    margin-top:0; margin-bottom:1rem; font-weight:800; font-size:1.6rem;
+  }
+  #qr-canvas {
+    margin: 1rem auto 1.5rem auto; width:220px; height:220px;
+  }
+  #qr-url {
+    word-break: break-word; background:#183b74; border-radius:12px;
+    padding:8px 12px; font-size: 0.9rem; font-weight: 600; color: #aacdff;
+    cursor: pointer; user-select: text; box-shadow: inset 0 0 5px #3563a9;
+  }
+  #qr-copy-btn, #qr-download-btn {
+    margin-top: 1rem; padding: 10px 20px; background: #56ccf2;
+    border-radius:16px; border:none; font-weight:700; font-size:1.05rem;
+    color: #0a213b; box-shadow: 0 4px 14px #56ccf2cc; cursor:pointer;
+    user-select:none; transition: background 0.3s ease; margin-right: 10px;
+  }
+  #qr-copy-btn:hover, #qr-download-btn:hover {
+    background: #2f80ed;
+    box-shadow: 0 6px 20px #2f80edcc;
+  }
+  #qr-close-btn {
+    position: absolute; top: 14px; right: 18px; background: transparent;
+    color:white; font-size: 1.8rem; border:none; cursor:pointer;
+    font-weight:900; user-select:none;
+  }
+  #qr-close-btn:hover {
+    color: #56ccf2;
+  }
+  /* Responsive */
+  @media (max-width: 640px) {
+    body { padding:1rem; }
+    #app { max-width: 100vw; border-radius: 0; height: 100vh; overflow: auto; }
+    nav.tabs button { padding: 10px 14px; font-size: 1rem; margin: 0 3px; }
+    #menu-builder { width: 100%; }
+    .product-card { width: 100%; }
+    #qr-copy-btn, #qr-download-btn { margin-right: 0; margin-bottom: 0.75rem; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>QR Menü Oluşturucu</header>
+  <main>
+    <!-- Auth Screens -->
+    <section id="auth-screen" class="screen active" aria-label="Kullanıcı Giriş">
+      <h2>Giriş Yapın</h2>
+      <form id="login-form" autocomplete="off" aria-label="Giriş Formu">
+        <label for="login-email">E-Posta</label>
+        <input type="email" id="login-email" name="login-email" placeholder="E-posta adresiniz" required autocomplete="username"/>
+        <label for="login-password">Şifre</label>
+        <input type="password" id="login-password" name="login-password" placeholder="Şifreniz" required autocomplete="current-password"/>
+        <button type="submit" style="background:#2f80ed;">Giriş Yap</button>
+      </form>
+      <button id="register-btn" type="button">Kayıt Ol</button>
+      <div id="auth-msg" class="message" style="display:none;"></div>
+    </section>
+
+    <section id="register-screen" class="screen" aria-label="Kayıt Ol">
+      <h2>Kayıt Ol</h2>
+      <form id="register-form" autocomplete="off" aria-label="Kayıt Formu">
+        <label for="register-email">E-Posta</label>
+        <input type="email" id="register-email" name="register-email" placeholder="E-posta adresiniz" required autocomplete="username"/>
+        <label for="register-password">Şifre</label>
+        <input type="password" id="register-password" name="register-password" placeholder="En az 6 karakter" minlength="6" required autocomplete="new-password" />
+        <button type="submit">Kayıt Ol</button>
+      </form>
+      <button id="back-to-login-btn" type="button">Geri Dön</button>
+      <div id="register-msg" class="message" style="display:none;"></div>
+    </section>
+
+    <!-- Draft Select -->
+    <section id="draft-screen" class="screen" aria-label="Taslak Seçimi">
+      <h2>Menü Taslağı Seçiniz</h2>
+      <div id="draft-select" role="list" aria-label="Taslak Menüler">
+        <button data-draft="draft1" aria-label="Taslak 1">Taslak 1</button>
+        <button data-draft="draft2" aria-label="Taslak 2">Taslak 2</button>
+        <button data-draft="draft3" aria-label="Taslak 3">Taslak 3</button>
+        <button data-draft="draft4" aria-label="Taslak 4">Taslak 4</button>
+      </div>
+      <button id="logout-btn" type="button">Çıkış Yap</button>
+    </section>
+
+    <!-- Menu Builder -->
+    <section id="menu-builder-screen" class="screen" aria-label="Menü Düzenleme">
+      <h2>Menü Düzenleyici</h2>
+      <nav class="tabs" role="tablist" aria-label="Menü Bölümleri">
+        <button role="tab" aria-selected="true" tabindex="0" data-tab="categories" class="active">Kategoriler</button>
+        <button role="tab" aria-selected="false" tabindex="-1" data-tab="preview">Önizleme</button>
+        <button role="tab" aria-selected="false" tabindex="-1" data-tab="settings">Ayarlar</button>
+      </nav>
+      <div id="menu-builder">
+        <div id="tab-categories" role="tabpanel" aria-hidden="false">
+          <button id="add-category-btn" aria-label="Yeni Kategori Ekle" type="button">+ Yeni Kategori Ekle</button>
+          <div id="categories-container" aria-live="polite" aria-relevant="additions removals"></div>
+        </div>
+        <div id="tab-preview" role="tabpanel" aria-hidden="true" style="display:none;">
+          <article id="menu-preview" tabindex="0" aria-label="Menü Önizlemesi" style="background: #173b6b; padding: 1rem; border-radius: 16px; max-width: 700px; margin: 0 auto; box-shadow: 0 8px 20px #103375cc;">
+            <header style="display:flex; justify-content:center; align-items:center; margin-bottom:1rem;">
+              <img id="preview-logo" src="" alt="Restoran Logosu" style="height:48px; margin-right:12px; border-radius:8px; display:none;" />
+              <h3 id="menu-title-preview" style="color:#aacdff; margin:0;"></h3>
+            </header>
+            <p id="menu-description-preview" style="color:#c4d7ffcc; font-style: italic; text-align:center; margin-bottom:1.4rem;"></p>
+            <div id="preview-content"></div>
+          </article>
+        </div>
+        <div id="tab-settings" role="tabpanel" aria-hidden="true" style="display:none;">
+          <form id="menu-settings-form" autocomplete="off" style="max-width: 400px; margin: 0 auto;">
+            <label for="menu-title">Menü Başlığı</label>
+            <input type="text" id="menu-title" name="menu-title" placeholder="Restaurantınızın menü başlığı" required minlength="3" />
+            <label for="menu-description">Menü Açıklaması</label>
+            <textarea id="menu-description" name="menu-description" rows="3" placeholder="Menünüz hakkında kısa bilgi"></textarea>
+            <label for="restaurant-logo">Restoran Logosu (PNG/JPG, opsiyonel)</label>
+            <input type="file" id="restaurant-logo" accept="image/png, image/jpeg" aria-describedby="logo-help" />
+            <small id="logo-help" style="color:#9ac0ffcc; display: block; margin-bottom: 15px;">Yüklenen logo menü önizleme ve müşteriye sunumda görünür.</small>
+            <label for="menu-subname">Benzersiz Alt İsim</label>
+            <input type="text" id="menu-subname" name="menu-subname" placeholder="örneğin restoranadi, cafe123 ..." pattern="^[a-z0-9\-]{3,20}$" title="Küçük harf, rakam veya tire olabilir, 3-20 karakter" required />
+            <button type="submit" id="save-menu-btn" aria-label="Menüyü Kaydet ve QR Kod Oluştur">Menüyü Kaydet ve QR Kod Oluştur</button>
+          </form>
+          <div id="settings-msg" class="message" style="display:none;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- QR Modal -->
+    <div id="qr-modal-bg" role="dialog" aria-modal="true" aria-labelledby="qr-modal-title" tabindex="-1">
+      <div id="qr-modal">
+        <button id="qr-close-btn" aria-label="QR Kod Kapat">&times;</button>
+        <h3 id="qr-modal-title">Menünüzün QR Kodu</h3>
+        <canvas id="qr-canvas" aria-label="QR Kod"></canvas>
+        <div id="qr-url" tabindex="0" aria-readonly="true" title="QR Menü URL, tıklayarak seçip kopyalayabilirsiniz"></div>
+        <div style="margin-top:16px;">
+          <button id="qr-copy-btn" aria-label="QR Kod URL Kopyala" type="button">URL Kopyala</button>
+          <button id="qr-download-btn" aria-label="QR Kod İndir" type="button">QR Kod İndir</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Public Menu Screen -->
+    <section id="public-menu-screen" class="screen" aria-label="Müşteri Menüsü" style="background:#0a213b; max-width: 700px; margin: 0 auto; padding: 2rem; border-radius: 24px; box-shadow: 0 0 50px #2f80edcc;">
+      <button id="back-to-login-btn-public" style="background:#2f80ed; margin-bottom: 1rem; display:none;">Girişe Dön</button>
+      <header style="display:flex; justify-content:center; align-items:center; margin-bottom: 1rem;">
+        <img id="public-logo" src="" alt="Restoran Logosu" style="height:48px; margin-right:12px; border-radius:8px; display:none;" />
+        <h2 id="public-menu-title" style="color:#aacdff; margin:0;"></h2>
+      </header>
+      <p id="public-menu-desc" style="text-align:center; font-weight:600; color:#aacdff; margin-bottom: 2rem;"></p>
+      <article id="public-menu-content" tabindex="0" aria-label="Menü Liste"></article>
+    </section>
+  </main>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<!-- QRCode lib -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
+<script>
+(() => {
+  'use strict';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCTZ-rJz7Lh7gXNX3H4GzzIOnaQxUY3mSc",
+    authDomain: "qrmenu-3c5b4.firebaseapp.com",
+    projectId: "qrmenu-3c5b4",
+    storageBucket: "qrmenu-3c5b4.appspot.com",
+    messagingSenderId: "802580265566",
+    appId: "1:802580265566:web:def4f0e328624f870f12cf",
+    measurementId: "G-MJRPH140S2"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const screens = {
+    auth: document.getElementById('auth-screen'),
+    register: document.getElementById('register-screen'),
+    draft: document.getElementById('draft-screen'),
+    builder: document.getElementById('menu-builder-screen'),
+    publicMenu: document.getElementById('public-menu-screen')
+  };
+
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const registerBtn = document.getElementById('register-btn');
+  const backToLoginBtn = document.getElementById('back-to-login-btn');
+  const backToLoginBtnPublic = document.getElementById('back-to-login-btn-public');
+  const authMsg = document.getElementById('auth-msg');
+  const registerMsg = document.getElementById('register-msg');
+  const logoutBtn = document.getElementById('logout-btn');
+  const draftSelect = document.getElementById('draft-select');
+  const addCategoryBtn = document.getElementById('add-category-btn');
+  const categoriesContainer = document.getElementById('categories-container');
+  const tabs = Array.from(document.querySelectorAll('nav.tabs button'));
+  const tabContents = {
+    categories: document.getElementById('tab-categories'),
+    preview: document.getElementById('tab-preview'),
+    settings: document.getElementById('tab-settings')
+  };
+  const menuTitleInput = document.getElementById('menu-title');
+  const menuDescInput = document.getElementById('menu-description');
+  const menuSubnameInput = document.getElementById('menu-subname');
+  const menuSettingsForm = document.getElementById('menu-settings-form');
+  const settingsMsg = document.getElementById('settings-msg');
+  const saveMenuBtn = document.getElementById('save-menu-btn');
+  const previewTitle = document.getElementById('menu-title-preview');
+  const previewDesc = document.getElementById('menu-description-preview');
+  const previewContent = document.getElementById('preview-content');
+  const previewLogo = document.getElementById('preview-logo');
+  const restaurantLogoInput = document.getElementById('restaurant-logo');
+
+  const qrModalBg = document.getElementById('qr-modal-bg');
+  const qrModal = document.getElementById('qr-modal');
+  const qrCanvas = document.getElementById('qr-canvas');
+  const qrUrl = document.getElementById('qr-url');
+  const qrCopyBtn = document.getElementById('qr-copy-btn');
+  const qrDownloadBtn = document.getElementById('qr-download-btn');
+  const qrCloseBtn = document.getElementById('qr-close-btn');
+
+  const publicMenuTitle = document.getElementById('public-menu-title');
+  const publicMenuDesc = document.getElementById('public-menu-desc');
+  const publicMenuContent = document.getElementById('public-menu-content');
+  const publicLogo = document.getElementById('public-logo');
+
+  let currentUser = null;
+  let currentDraft = null;
+  let editingMenu = null;
+  let restaurantLogoDataUrl = '';
+
+  const generateId = (len=20) => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let s = '';
+    for(let i=0;i<len;i++){
+      s += chars[Math.floor(Math.random()*chars.length)];
+    }
+    return s;
+  };
+
+  const showMessage = (el, msg, dur=4000) => {
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, dur);
+  };
+
+  function showScreen(name){
+    Object.entries(screens).forEach(([k,v])=>{
+      if(!v) return;
+      if(k===name) v.classList.add('active'); else v.classList.remove('active');
+    });
+    backToLoginBtnPublic.style.display = (name==='publicMenu') ? 'inline-block' : 'none';
+    clearMessages();
+  }
+
+  function clearMessages(){
+    [authMsg, registerMsg, settingsMsg].forEach(el=>el.style.display='none');
+  }
+
+  const menuSkeletonBase = {
+    title: 'Lezzetli Yemeklerimiz',
+    description: 'Size özel enfes tatlar',
+    categories: [
+      {id: generateId(), name: 'Başlangıçlar', products:[]},
+      {id: generateId(), name: 'Ana Yemekler', products:[]},
+      {id: generateId(), name: 'Tatlılar', products:[]}
+    ],
+    logo: ''
+  };
+
+  const draftTemplates = {
+    draft1: {style:'style1'},
+    draft2: {style:'style2'},
+    draft3: {style:'style3'},
+    draft4: {style:'style4'}
+  };
+
+  function renderCategories(){
+    categoriesContainer.innerHTML = '';
+    if(!editingMenu?.categories?.length){
+      categoriesContainer.innerHTML = '<p style="color:#a0b8ffcc; text-align:center;">Henüz kategori yok. Yeni kategori ekleyin.</p>';
+      return;
+    }
+    editingMenu.categories.forEach(category=>{
+      const catDiv = document.createElement('div');
+      catDiv.className = 'category-card';
+      catDiv.dataset.catId = category.id;
+
+      const header = document.createElement('div');
+      header.className = 'category-header';
+
+      const h3 = document.createElement('h3');
+      h3.contentEditable = true;
+      h3.spellcheck = false;
+      h3.setAttribute('aria-label','Kategori adı düzenle');
+      h3.setAttribute('tabindex','0');
+      h3.textContent = category.name;
+      h3.oninput = e=>{
+        category.name = e.target.textContent.trim() || 'Yeni Kategori';
+        renderPreview();
+      };
+      header.appendChild(h3);
+
+      const actions = document.createElement('div');
+      actions.className = 'category-actions';
+
+      const deleteCatBtn = document.createElement('button');
+      deleteCatBtn.innerHTML = '&#128465;';
+      deleteCatBtn.title = 'Kategoriyi sil';
+      deleteCatBtn.onclick = () => {
+        if(confirm(`"${category.name}" kategorisi silinecek. Emin misiniz?`)){
+          editingMenu.categories = editingMenu.categories.filter(c=>c.id!==category.id);
+          renderCategories();
+          renderPreview();
+        }
+      };
+      actions.appendChild(deleteCatBtn);
+
+      const addProdBtn = document.createElement('button');
+      addProdBtn.textContent = '+ Ürün Ekle';
+      addProdBtn.title = 'Kategoriye ürün ekle';
+      addProdBtn.onclick = () => {
+        category.products = category.products || [];
+        category.products.push({id: generateId(), name:'', description:'', price:'', image:''});
+        renderCategories();
+      };
+      actions.appendChild(addProdBtn);
+
+      header.appendChild(actions);
+      catDiv.appendChild(header);
+
+      const prodList = document.createElement('div');
+      prodList.className = 'product-list';
+
+      if(!category.products?.length){
+        const pEmpty = document.createElement('p');
+        pEmpty.textContent = 'Henüz ürün yok.';
+        pEmpty.style.color = '#aacdffbb';
+        pEmpty.style.fontStyle = 'italic';
+        prodList.appendChild(pEmpty);
+      } else {
+        category.products.forEach(product=>{
+          prodList.appendChild(createProductCard(product, category.id));
+        });
+      }
+      catDiv.appendChild(prodList);
+
+      categoriesContainer.appendChild(catDiv);
+    });
+  }
+  function createProductCard(product, categoryId){
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    card.dataset.prodId = product.id;
+
+    const img = document.createElement('img');
+    img.alt = product.name ? `${product.name} fotoğrafı` : 'Ürün fotoğrafı';
+    img.src = product.image || '';
+    img.style.display = product.image ? 'block' : 'none';
+    card.appendChild(img);
+
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/png,image/jpeg';
+    fileInput.title = 'Ürün resmi yükle';
+    fileInput.onchange = e=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      if(!file.type.startsWith('image/')) {
+        alert('Geçerli resim seçin (PNG/JPG)');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = e2=>{
+        product.image = e2.target.result;
+        img.src = product.image;
+        img.style.display = 'block';
+        renderPreview();
+      };
+      reader.readAsDataURL(file);
+    };
+    card.appendChild(fileInput);
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.required = true;
+    nameInput.placeholder = 'Ürün adı *';
+    nameInput.value = product.name;
+    nameInput.oninput = e=>{
+      product.name = e.target.value;
+      img.alt = product.name ? `${product.name} fotoğrafı` : 'Ürün fotoğrafı';
+      renderPreview();
+    };
+    card.appendChild(nameInput);
+
+    const descArea = document.createElement('textarea');
+    descArea.placeholder = 'Ürün açıklaması';
+    descArea.rows = 2;
+    descArea.value = product.description;
+    descArea.oninput = e=>{
+      product.description = e.target.value;
+      renderPreview();
+    };
+    card.appendChild(descArea);
+
+    const priceInput = document.createElement('input');
+    priceInput.type = 'number';
+    priceInput.min = '0';
+    priceInput.step = '0.01';
+    priceInput.required = true;
+    priceInput.placeholder = 'Fiyat (TL) *';
+    priceInput.value = product.price;
+    priceInput.oninput = e=>{
+      const val = parseFloat(e.target.value);
+      product.price = isNaN(val) ? '' : val.toFixed(2);
+      renderPreview();
+    };
+    card.appendChild(priceInput);
+
+    const prodActions = document.createElement('div');
+    prodActions.className = 'product-actions';
+    const delBtn = document.createElement('button');
+    delBtn.textContent = 'Sil';
+    delBtn.title = 'Ürünü sil';
+    delBtn.onclick = () => {
+      const cat = editingMenu.categories.find(c=>c.id===categoryId);
+      if(!cat) return;
+      cat.products = cat.products.filter(p=>p.id!==product.id);
+      renderCategories();
+      renderPreview();
+    };
+    prodActions.appendChild(delBtn);
+    card.appendChild(prodActions);
+
+    return card;
+  }
+
+  document.getElementById('add-category-btn').addEventListener('click', () => {
+    if(!editingMenu.categories) editingMenu.categories = [];
+    editingMenu.categories.push({id: generateId(), name: 'Yeni Kategori', products: []});
+    renderCategories();
+    renderPreview();
+  });
+
+  tabs.forEach(tabBtn=>{
+    tabBtn.addEventListener('click', e=>{
+      activateTab(e.target.dataset.tab);
+    });
+  });
+  function activateTab(tab){
+    tabs.forEach(t=>{
+      const active = t.dataset.tab === tab;
+      t.classList.toggle('active', active);
+      t.setAttribute('aria-selected', active ? 'true' : 'false');
+      t.setAttribute('tabindex', active ? '0' : '-1');
+    });
+    Object.entries(tabContents).forEach(([k,v])=>{
+      if(!v) return;
+      if(k === tab){
+        v.style.display = 'block';
+        v.setAttribute('aria-hidden', 'false');
+      } else {
+        v.style.display = 'none';
+        v.setAttribute('aria-hidden', 'true');
+      }
+    });
+    if(tab==='preview') renderPreview();
+  }
+
+  restaurantLogoInput.addEventListener('change', e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    if(!file.type.startsWith('image/')){
+      alert('PNG/JPG formatında resim yükleyin.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = e2=>{
+      restaurantLogoDataUrl = e2.target.result;
+      previewLogo.src = restaurantLogoDataUrl;
+      previewLogo.style.display = 'inline-block';
+      renderPreview();
+    };
+    reader.readAsDataURL(file);
+  });
+
+  menuSettingsForm.addEventListener('submit', async e=>{
+    e.preventDefault();
+    await saveMenu();
+  });
+
+  async function saveMenu(){
+    const title = menuTitleInput.value.trim();
+    const desc = menuDescInput.value.trim();
+    const subname = menuSubnameInput.value.trim();
+
+    if(title.length<3){
+      showMessage(settingsMsg, 'Menü başlığı en az 3 karakter olmalı.');
+      return false;
+    }
+    if(!subname.match(/^[a-z0-9\-]{3,20}$/)){
+      showMessage(settingsMsg, 'Alt isim küçük harf, rakam veya tire olabilir ve 3-20 karakter olmalı.');
+      return false;
+    }
+    try {
+      settingsMsg.style.display = 'none';
+
+      const docRef = db.collection('menus').doc(subname);
+      const docSnap = await docRef.get();
+
+      if(docSnap.exists && docSnap.data().owner !== auth.currentUser.uid){
+        showMessage(settingsMsg, 'Bu alt isim başka kullanıcı tarafından kullanılıyor.');
+        return false;
+      }
+
+      editingMenu.title = title;
+      editingMenu.description = desc;
+      editingMenu.logo = restaurantLogoDataUrl || '';
+
+      const payload = {
+        owner: auth.currentUser.uid,
+        ownerEmail: auth.currentUser.email,
+        data: editingMenu,
+        style: currentDraft && draftTemplates[currentDraft] ? draftTemplates[currentDraft].style : 'style1',
+        updated: new Date()
+      };
+
+      await docRef.set(payload);
+
+      let baseUrl = window.location.origin + window.location.pathname;
+      const url = `${baseUrl}?menu=${encodeURIComponent(subname)}`;
+      showQRModal(url);
+
+      return true;
+    } catch(err){
+      console.error(err);
+      showMessage(settingsMsg, 'Menü kaydedilirken hata oluştu. Lütfen tekrar deneyiniz.');
+      return false;
+    }
+  }
+
+  loginForm.addEventListener('submit', async e=>{
+    e.preventDefault();
+    clearMessages();
+    const email = loginForm['login-email'].value.trim();
+    const password = loginForm['login-password'].value;
+
+    try {
+      await auth.signInWithEmailAndPassword(email,password);
+      currentUser = auth.currentUser;
+      showScreen('draft');
+      loginForm.reset();
+    } catch(e){
+      showMessage(authMsg, e.message);
+    }
+  });
+
+  registerForm.addEventListener('submit', async e=>{
+    e.preventDefault();
+    clearMessages();
+    const email = registerForm['register-email'].value.trim();
+    const password = registerForm['register-password'].value;
+
+    try {
+      await auth.createUserWithEmailAndPassword(email,password);
+      currentUser = auth.currentUser;
+      showMessage(registerMsg, 'Kayıt başarılı, giriş yapıldı.');
+      setTimeout(()=>{showScreen('draft');},1500);
+      registerForm.reset();
+    } catch(e){
+      showMessage(registerMsg, e.message);
+    }
+  });
+
+  registerBtn.addEventListener('click', e=>{
+    clearMessages();
+    showScreen('register');
+  });
+
+  backToLoginBtn.addEventListener('click', e=>{
+    clearMessages();
+    showScreen('auth');
+  });
+
+  logoutBtn.addEventListener('click', async e=>{
+    if(confirm('Çıkış yapmak istediğinize emin misiniz?')){
+      await auth.signOut();
+      currentUser = null;
+      currentDraft = null;
+      editingMenu = null;
+      restaurantLogoDataUrl = '';
+      showScreen('auth');
+    }
+  });
+
+  draftSelect.addEventListener('click', e=>{
+    if(e.target.tagName==='BUTTON'){
+      currentDraft = e.target.dataset.draft;
+      editingMenu = JSON.parse(JSON.stringify(menuSkeletonBase));
+      if(draftTemplates[currentDraft]){
+        editingMenu.style = draftTemplates[currentDraft].style;
+      } else {
+        editingMenu.style = 'style1';
+      }
+      menuTitleInput.value = editingMenu.title;
+      menuDescInput.value = editingMenu.description;
+      menuSubnameInput.value = '';
+      restaurantLogoDataUrl = '';
+      previewLogo.src = '';
+      previewLogo.style.display = 'none';
+      renderCategories();
+      renderPreview();
+      showScreen('builder');
+      activateTab('categories');
+    }
+  });
+
+  function showQRModal(url){
+    qrModalBg.classList.add('active');
+    qrUrl.textContent = url;
+    qrUrl.title = "QR Menü URL, tıklayarak seçip kopyalayabilirsiniz";
+    QRCode.toCanvas(qrCanvas, url, {width:220, color: {dark:'#2f80ed', light:'#fff'}}, (err)=>{
+      if(err) console.error(err);
+    });
+    qrCopyBtn.focus();
+  }
+  function hideQRModal(){
+    qrModalBg.classList.remove('active');
+    const ctx = qrCanvas.getContext('2d');
+    ctx.clearRect(0,0,qrCanvas.width, qrCanvas.height);
+  }
+  qrCopyBtn.addEventListener('click',()=>{
+    if(!qrUrl.textContent) return;
+    navigator.clipboard.writeText(qrUrl.textContent).then(()=>{
+      alert('URL kopyalandı!');
+      qrCopyBtn.focus();
+    }).catch(()=>{
+      alert('Kopyalama başarısız oldu. Elle kopyalayınız.');
+    });
+  });
+  qrDownloadBtn.addEventListener('click', () => {
+    if(!qrCanvas) return;
+    const link = document.createElement('a');
+    link.download = 'qr-menu.png';
+    link.href = qrCanvas.toDataURL();
+    link.click();
+  });
+  qrCloseBtn.addEventListener('click', hideQRModal);
+  qrModalBg.addEventListener('click', e=>{
+    if(e.target === qrModalBg) hideQRModal();
+  });
+
+  backToLoginBtnPublic.addEventListener('click', async e=>{
+    await auth.signOut();
+    currentUser = null;
+    currentDraft = null;
+    editingMenu = null;
+    restaurantLogoDataUrl = '';
+    showScreen('auth');
+  });
+
+  async function renderPublicMenu(subname){
+    try {
+      const docRef = db.collection('menus').doc(subname);
+      const docSnap = await docRef.get();
+      if(!docSnap.exists){
+        alert('Menü bulunamadı.');
+        showScreen('auth');
+        return;
+      }
+      const menuData = docSnap.data().data;
+      const style = docSnap.data().style || 'style1';
+
+      showScreen('publicMenu');
+      publicMenuTitle.textContent = menuData.title || '';
+      publicMenuDesc.textContent = menuData.description || '';
+      if(menuData.logo){
+        publicLogo.src = menuData.logo;
+        publicLogo.style.display = 'inline-block';
+      } else {
+        publicLogo.style.display = 'none';
+      }
+      publicMenuContent.innerHTML = '';
+      menuData.categories.forEach(cat => {
+        const sec = document.createElement('section');
+        sec.style.marginBottom = '1.5rem';
+
+        const h3 = document.createElement('h3');
+        h3.textContent = cat.name;
+        h3.style.margin = '0 0 8px 0';
+        switch(style){
+          case 'style2': h3.style.color = '#d8b533'; h3.style.borderBottom = '2px dashed #d8b533'; break;
+          case 'style3': h3.style.color = '#ffa9a9'; h3.style.borderBottom = '3px double #ff5252'; break;
+          case 'style4': h3.style.color = '#b3ffd9'; h3.style.borderBottom = '2px solid #4dbf81'; break;
+          default: h3.style.color = '#76a9ff'; h3.style.borderBottom = '2px solid #2f80ed';
+        }
+        sec.appendChild(h3);
+
+        if(!cat.products?.length){
+          const pEmpty = document.createElement('p');
+          pEmpty.textContent = 'Henüz ürün yok.';
+          pEmpty.style.fontStyle = 'italic';
+          pEmpty.style.color = '#a9c3ffc0';
+          sec.appendChild(pEmpty);
+        } else {
+          cat.products.forEach(prod => {
+            const prodDiv = document.createElement('article');
+            prodDiv.style.marginBottom = '1rem';
+            prodDiv.style.padding = '12px';
+            prodDiv.style.borderRadius = '14px';
+            prodDiv.style.boxShadow = '0 6px 12px #103275cc';
+            prodDiv.style.color = 'white';
+
+            switch(style){
+              case 'style2': prodDiv.style.background = '#463f15'; break;
+              case 'style3': prodDiv.style.background = '#541313'; break;
+              case 'style4': prodDiv.style.background = '#145933'; break;
+              default: prodDiv.style.background = '#22477a';
+            }
+
+            if(prod.image){
+              const img = document.createElement('img');
+              img.src = prod.image;
+              img.alt = prod.name || 'Ürün fotoğrafı';
+              img.style.width = '100%';
+              img.style.height = '140px';
+              img.style.objectFit = 'cover';
+              img.style.borderRadius = '12px';
+              img.style.marginBottom = '10px';
+              prodDiv.appendChild(img);
+            }
+            const h4 = document.createElement('h4');
+            h4.textContent = prod.name;
+            h4.style.margin = '0 0 6px 0';
+            h4.style.fontWeight = '800';
+            prodDiv.appendChild(h4);
+
+            if(prod.description){
+              const pDesc = document.createElement('p');
+              pDesc.textContent = prod.description;
+              pDesc.style.color = '#aacdffcc';
+              pDesc.style.margin = '0 0 6px 0';
+              prodDiv.appendChild(pDesc);
+            }
+            const pPrice = document.createElement('p');
+            pPrice.textContent = prod.price ? prod.price + ' TL' : '';
+            pPrice.style.fontWeight = '700';
+            pPrice.style.color = '#56ccf2';
+            pPrice.style.margin = '0';
+            prodDiv.appendChild(pPrice);
+
+            sec.appendChild(prodDiv);
+          });
+        }
+        publicMenuContent.appendChild(sec);
+      });
+
+    } catch(err){
+      alert('Menü yüklenirken hata oluştu.');
+      showScreen('auth');
+      console.error(err);
+    }
+  }
+
+  function renderPreview(){
+    previewTitle.textContent = editingMenu.title || '';
+    previewDesc.textContent = editingMenu.description || '';
+    previewContent.innerHTML = '';
+    previewLogo.style.display = restaurantLogoDataUrl ? 'inline-block' : 'none';
+    previewLogo.src = restaurantLogoDataUrl || '';
+
+    if(!editingMenu.categories?.length) return;
+
+    const style = currentDraft && draftTemplates[currentDraft] ? draftTemplates[currentDraft].style : 'style1';
+
+    editingMenu.categories.forEach(cat=>{
+      const sec = document.createElement('section');
+      sec.style.marginBottom = '1.2rem';
+
+      const h4 = document.createElement('h4');
+      h4.textContent = cat.name || 'Kategori';
+      h4.style.paddingBottom = '4px';
+      h4.style.margin = '0 0 8px 0';
+      switch(style){
+        case 'style2': h4.style.color = '#d8b533'; h4.style.borderBottom = '2px dashed #d8b533'; break;
+        case 'style3': h4.style.color = '#ffa9a9'; h4.style.borderBottom = '3px double #ff5252'; break;
+        case 'style4': h4.style.color = '#b3ffd9'; h4.style.borderBottom = '2px solid #4dbf81'; break;
+        default: h4.style.color = '#89b6ff'; h4.style.borderBottom = '2px solid #2f80ed';
+      }
+      sec.appendChild(h4);
+
+      if(!cat.products?.length){
+        const pEmpty = document.createElement('p');
+        pEmpty.textContent = 'Henüz ürün yok.';
+        pEmpty.style.fontStyle = 'italic';
+        pEmpty.style.color = '#a9c3ffbb';
+        sec.appendChild(pEmpty);
+      } else {
+        cat.products.forEach(prod=>{
+          const prodDiv = document.createElement('div');
+          prodDiv.style.marginBottom = '0.8rem';
+          prodDiv.style.padding = '10px 14px';
+          prodDiv.style.borderRadius = '14px';
+          prodDiv.style.boxShadow = '0 4px 10px #18418bcc';
+          prodDiv.style.color = 'white';
+
+          switch(style){
+            case 'style2': prodDiv.style.background = '#463f15'; break;
+            case 'style3': prodDiv.style.background = '#541313'; break;
+            case 'style4': prodDiv.style.background = '#145933'; break;
+            default: prodDiv.style.background = '#2a4383';
+          }
+
+          if(prod.image){
+            const img = document.createElement('img');
+            img.src = prod.image;
+            img.alt = prod.name || 'Ürün fotoğrafı';
+            img.style.width = '100%';
+            img.style.height = '120px';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '12px';
+            img.style.marginBottom = '8px';
+            prodDiv.appendChild(img);
+          }
+          const nameP = document.createElement('p');
+          nameP.textContent = prod.name || '';
+          nameP.style.fontWeight = '800';
+          nameP.style.fontSize = '1.1rem';
+          nameP.style.margin = '0 0 4px 0';
+          prodDiv.appendChild(nameP);
+
+          if(prod.description){
+            const descP = document.createElement('p');
+            descP.textContent = prod.description;
+            descP.style.fontSize = '0.9rem';
+            descP.style.color = '#aacdffcc';
+            descP.style.margin = '0 0 4px 0';
+            prodDiv.appendChild(descP);
+          }
+          const priceP = document.createElement('p');
+          priceP.textContent = prod.price ? prod.price + ' TL' : '';
+          priceP.style.fontWeight = '700';
+          switch(style){
+            case 'style2': priceP.style.color = '#eedc55'; break;
+            case 'style3': priceP.style.color = '#ffbebe'; break;
+            case 'style4': priceP.style.color = '#90e8ad'; break;
+            default: priceP.style.color = '#56ccf2';
+          }
+          priceP.style.margin = '0';
+          prodDiv.appendChild(priceP);
+
+          sec.appendChild(prodDiv);
+        });
+      }
+      previewContent.appendChild(sec);
+    });
+  }
+
+  auth.onAuthStateChanged((user) => {
+    if(user){
+      currentUser = user;
+      showScreen('draft');
+    } else {
+      currentUser = null;
+      currentDraft = null;
+      editingMenu = null;
+      restaurantLogoDataUrl = '';
+      showScreen('auth');
+    }
+  });
+
+  function checkUrlForMenu(){
+    const params = new URLSearchParams(window.location.search);
+    const submenu = params.get('menu');
+    if(submenu){
+      renderPublicMenu(submenu);
+    } else if(auth.currentUser){
+      showScreen('draft');
+    } else {
+      showScreen('auth');
+    }
+  }
+  checkUrlForMenu();
+})();
+</script>
+</body>
+</html>
+
